@@ -19,7 +19,7 @@ module.exports = (sequelize, Sequelize) => {
       },
     },
     {
-      timestamps: false, // Disable timestamps
+      timestamps: true, // Disable timestamps
     }
   );
 

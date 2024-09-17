@@ -9,7 +9,7 @@ const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
     freezeTableName: true,
   },
   define: {
-    timestamps: false, // Disable timestamps for all models
+    timestamps: true, // Disable timestamps for all models
   },
   pool: {
     max: dbConfig.pool.max,
