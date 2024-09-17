@@ -2,11 +2,29 @@ const express = require("express");
 const http = require("http");
 const socketio = require("socket.io");
 const session = require("express-session");
-const sessionStore = require("sessionstore"); // You might not need this if using in-memory store
-
+const { sequelize } = require("./app/models/index");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+const uploadRoute = require("./app/routes/routes");
+const { Live } = require("./app/models/index");
 const app = express();
 const server = http.createServer(app);
 
+var corsOptions = {
+  origin: ["http://localhost:3001", "http://localhost:3000"], // Change this to your frontend's URL
+};
+app.use(cors(corsOptions));
+
+sequelize
+  .sync({ force: false }) // Set force to true to drop existing tables
+  .then(() => {
+    console.log("Database synced successfully");
+  })
+  .catch((error) => {
+    console.error("Error syncing database:", error);
+  });
+
+app.use(bodyParser.json());
 // Session store setup
 const sessionMiddleware = session({
   secret: "your-secret-key",
@@ -36,14 +54,26 @@ io.on("connection", (socket) => {
   // Handle room creation
   socket.on("createRoom", (roomData) => {
     console.log("Room Created:", roomData);
-    socket.request.session.roomDetails = roomData;
-    socket.request.session.save();
-
-    socket.emit("roomCreated", roomData);
+    io.emit("newRoomNotification", roomData);
   });
 
   // Emit room details when the user connects
-  socket.emit("roomLink", socket.request.session.roomDetails);
+  // Assuming you're inside an async function or a socket event handler
+
+  socket.on("requestRoomLink", async () => {
+    try {
+      // Perform your asynchronous operation here
+      const data = await Live.findAll();
+
+      // Emit the event with the result
+      socket.emit("roomLink", { data });
+    } catch (error) {
+      console.error("Error fetching room link:", error);
+
+      // Optionally emit an error event
+      socket.emit("error", { message: "Failed to fetch room link." });
+    }
+  });
 
   // Handle participant join
   socket.on("join room", ({ userName, roomId }) => {
@@ -86,6 +116,8 @@ io.on("connection", (socket) => {
   });
 });
 
+app.use("/", uploadRoute);
+
 server.listen(5000, () => {
-  console.log("listening on *:5000");
+  console.log(`Server is running on http://localhost:5000`);
 });

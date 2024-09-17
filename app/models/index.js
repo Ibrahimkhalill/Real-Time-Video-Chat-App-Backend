@@ -25,6 +25,7 @@ const Feedback = require("./Feedback")(sequelize, Sequelize);
 const Quiz = require("./Quiz")(sequelize, Sequelize);
 const Lecture = require("./Lecture")(sequelize, Sequelize);
 const Student = require("./Student")(sequelize, Sequelize);
+const Live = require("./Live")(sequelize, Sequelize);
 
 //faq foreignkey
 
@@ -36,5 +37,6 @@ module.exports = {
   Feedback,
   Quiz,
   Lecture,
+  Live,
   Student,
 };
