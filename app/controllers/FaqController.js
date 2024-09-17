@@ -8,8 +8,11 @@ async function CreateRoom(req, res) {
     const roomData = req.body;
     const { live_link, live_name } = roomData;
 
-    // Delete all existing rooms in the Live table
-    await Live.deleteMany({});
+    // Delete all existing rooms from the Live table
+    await Live.destroy({
+      where: {}, // Empty where clause will delete all records
+      truncate: true // Optional: If you want to reset auto-increment IDs
+    });
     console.log("All previous rooms deleted");
 
     // Create the new room
@@ -25,6 +28,7 @@ async function CreateRoom(req, res) {
     res.status(500).json({ error: "Internal Server Error" });
   }
 }
+
 
 // Call the function to upload a single video
 
