@@ -11,7 +11,7 @@ const app = express();
 const server = http.createServer(app);
 
 var corsOptions = {
-  origin: ["http://localhost:3001", "http://localhost:3000"], // Change this to your frontend's URL
+  origin: ["http://localhost:3001", "http://localhost:3000"], 
 };
 app.use(cors(corsOptions));
 
@@ -53,12 +53,11 @@ io.on("connection", (socket) => {
 
   // Handle room creation
   socket.on("createRoom", (roomData) => {
-    console.log("Room Created:", roomData);
+  
     io.emit("newRoomNotification", roomData);
   });
 
-  // Emit room details when the user connects
-  // Assuming you're inside an async function or a socket event handler
+
 
   socket.on("requestRoomLink", async () => {
     try {
@@ -76,21 +75,38 @@ io.on("connection", (socket) => {
   });
 
   // Handle participant join
-  socket.on("join room", ({ userName, roomId }) => {
-    console.log("Join room:", userName, roomId);
+  socket.on("join room", ({ userName, roomId, role }) => {
+    console.log("Join room:", userName, roomId, role);
 
     // Ensure the room exists
-
     const existingParticipant = participants.find(
       (p) => p.userName === userName
     );
 
     if (!existingParticipant) {
-      participants.push({ userName: userName, userId: socket.id });
+      // Add the new participant
+      participants.push({
+        userName: userName,
+        userId: socket.id,
+        roles: role,
+        roomId: roomId,
+      });
     }
 
     socket.join(roomId);
+
+    // Find the admin in the room (assuming there's only one admin per room)
+    const admin = participants.find(
+      (p) => p.roles === "admin" && p.roomId === roomId
+    );
+
+    // Emit the participant joined event to everyone in the room
     io.to(roomId).emit("participant joined", participants);
+    // If the joining user is NOT an admin, notify the admin only
+    if (role !== "admin" && admin) {
+      console.log("Notifying admin of new participant:", userName);
+      io.to(admin.userId).emit("notify admin", { newParticipant: userName });
+    }
   });
 
   // Handle chat messages
@@ -99,18 +115,20 @@ io.on("connection", (socket) => {
   });
 
   socket.on("adminLeft", (roomId) => {
-    // Emit to all users in the room
     io.to(roomId).emit("adminLeft", roomId);
-    console.log("Admin left", roomId);
   });
-  console.log("participants", participants);
+
   // Handle participant leave
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-    console.log("participants", participants);
-
+    
+    const admin = participants.find(
+      (p) => p.roles === "admin" && p.userId === socket.id
+    );
+    console.log("admin", admin);
     // Remove participant from all rooms
-
+    if (admin) {
+      io.to(admin.roomId).emit("adminLeft", admin.roomId);
+    }
     participants = participants.filter((p) => p.userId !== socket.id);
     io.emit("participant left", participants);
   });
